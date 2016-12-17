@@ -27,8 +27,7 @@ import co.cask.cdap.etl.api.Emitter;
 import co.cask.cdap.etl.api.PipelineConfigurer;
 import co.cask.cdap.etl.api.Transform;
 import co.cask.cdap.etl.api.TransformContext;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import com.google.common.annotations.VisibleForTesting;
 
 import java.io.IOException;
 import java.util.List;
@@ -40,13 +39,13 @@ import java.util.List;
 @Name("RecordSplitter")
 @Description("Given a field and a delimiter, this splits it into multiple records.")
 public final class RecordSplitter extends Transform<StructuredRecord, StructuredRecord> {
-  private static final Logger LOG = LoggerFactory.getLogger(RecordSplitter.class);
   private final Config config;
 
   // Output Schema associated with transform output.
   private Schema outSchema;
+  List<Schema.Field> fields;
 
-  // Required only for testing.
+  @VisibleForTesting
   public RecordSplitter(Config config) {
     this.config = config;
   }
@@ -54,7 +53,8 @@ public final class RecordSplitter extends Transform<StructuredRecord, Structured
   @Override
   public void configurePipeline(PipelineConfigurer pipelineConfigurer) throws IllegalArgumentException {
     super.configurePipeline(pipelineConfigurer);
-    config.validate();
+    Schema inputSchema = pipelineConfigurer.getStageConfigurer().getInputSchema();
+    config.validate(inputSchema);
     // Just checking that the operator is valid
     try {
       pipelineConfigurer.getStageConfigurer().setOutputSchema(Schema.parseJson(config.schema));
@@ -71,11 +71,14 @@ public final class RecordSplitter extends Transform<StructuredRecord, Structured
     } catch (IOException e) {
       throw new IllegalArgumentException("Format of schema specified is invalid. Please check the format.", e);
     }
+    fields = null;
   }
 
   @Override
   public void transform(StructuredRecord in, Emitter<StructuredRecord> emitter) throws Exception {
-    List<Schema.Field> fields = in.getSchema().getFields();
+    if (fields == null) {
+      fields = in.getSchema().getFields();
+    }
     Object valueToSplit = in.get(config.fieldToSplit);
     if (valueToSplit != null) {
       String[] records = String.valueOf(valueToSplit).split(config.delimiter);
@@ -124,7 +127,7 @@ public final class RecordSplitter extends Transform<StructuredRecord, Structured
       this.schema = schema;
     }
 
-    public void validate() throws IllegalArgumentException {
+    public void validate(Schema inputSchema) throws IllegalArgumentException {
       try {
         Schema outSchema = Schema.parseJson(schema);
         if (outSchema.getField(outputField) == null) {
@@ -132,6 +135,17 @@ public final class RecordSplitter extends Transform<StructuredRecord, Structured
         }
       } catch (IOException e) {
         throw new IllegalArgumentException("Unable to parse output schema.", e);
+      }
+      Schema inputFieldSchema = inputSchema.getField(fieldToSplit).getSchema();
+      if (inputFieldSchema.isSimpleOrNullableSimple()) {
+        Schema.Type inputFieldType = (inputFieldSchema.isNullableSimple())
+          ? inputFieldSchema.getNonNullable().getType()
+          : inputFieldSchema.getType();
+        if (!(inputFieldType == Schema.Type.STRING)) {
+          throw new IllegalArgumentException("Source field: " + fieldToSplit +
+                                             " must be of type string. It is type: " +
+                                             inputFieldType.name());
+        }
       }
     }
   }

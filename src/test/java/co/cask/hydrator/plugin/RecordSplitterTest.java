@@ -44,4 +44,13 @@ public class RecordSplitterTest {
     Assert.assertEquals("cdap", emitter.getEmitted().get(0).get("b"));
     Assert.assertEquals("rocks", emitter.getEmitted().get(1).get("b"));
   }
+
+  @Test(expected = IllegalArgumentException.class)
+  public void testValidateSplitter() throws Exception {
+    Schema inputSchema = Schema.recordOf("input",
+                                         Schema.Field.of("a", Schema.of(Schema.Type.BYTES)),
+                                         Schema.Field.of("b", Schema.of(Schema.Type.STRING)));
+    RecordSplitter.Config config = new RecordSplitter.Config("a", "\n", "b", inputSchema.toString());
+    config.validate(inputSchema);
+  }
 }
