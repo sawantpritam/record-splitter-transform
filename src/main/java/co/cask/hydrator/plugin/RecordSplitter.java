@@ -146,7 +146,7 @@ public final class RecordSplitter extends Transform<StructuredRecord, Structured
                                                            fieldToSplit, inputFieldType.name()));
         }
       } else {
-        throw new IllegalArgumentException(String.format("Source field: %s must be of type string. It is type: %s",
+        throw new IllegalArgumentException(String.format("Source field: %s must be a simple type. It is type: %s",
                                                          fieldToSplit, inputFieldSchema.getType().name()));
       }
     }
