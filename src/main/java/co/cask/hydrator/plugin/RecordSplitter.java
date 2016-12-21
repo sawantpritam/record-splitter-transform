@@ -137,17 +137,13 @@ public final class RecordSplitter extends Transform<StructuredRecord, Structured
         throw new IllegalArgumentException("Unable to parse output schema.", e);
       }
       Schema inputFieldSchema = inputSchema.getField(fieldToSplit).getSchema();
-      if (inputFieldSchema.isSimpleOrNullableSimple()) {
-        Schema.Type inputFieldType = (inputFieldSchema.isNullableSimple())
-          ? inputFieldSchema.getNonNullable().getType()
-          : inputFieldSchema.getType();
-        if (!(inputFieldType == Schema.Type.STRING)) {
-          throw new IllegalArgumentException(String.format("Source field: %s must be of type string. It is type: %s",
-                                                           fieldToSplit, inputFieldType.name()));
-        }
-      } else {
-        throw new IllegalArgumentException(String.format("Source field: %s must be a simple type. It is type: %s",
-                                                         fieldToSplit, inputFieldSchema.getType().name()));
+
+      Schema.Type inputFieldType = (inputFieldSchema.isNullable())
+        ? inputFieldSchema.getNonNullable().getType()
+        : inputFieldSchema.getType();
+      if (inputFieldType != Schema.Type.STRING) {
+        throw new IllegalArgumentException(String.format("Source field: %s must be of type string. It is type: %s",
+                                                         fieldToSplit, inputFieldType.name()));
       }
     }
   }
