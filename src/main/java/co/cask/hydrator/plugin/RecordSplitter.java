@@ -142,10 +142,12 @@ public final class RecordSplitter extends Transform<StructuredRecord, Structured
           ? inputFieldSchema.getNonNullable().getType()
           : inputFieldSchema.getType();
         if (!(inputFieldType == Schema.Type.STRING)) {
-          throw new IllegalArgumentException("Source field: " + fieldToSplit +
-                                             " must be of type string. It is type: " +
-                                             inputFieldType.name());
+          throw new IllegalArgumentException(String.format("Source field: %s must be of type string. It is type: %s",
+                                                           fieldToSplit, inputFieldType.name()));
         }
+      } else {
+        throw new IllegalArgumentException(String.format("Source field: %s must be of type string. It is type: %s",
+                                                         fieldToSplit, inputFieldSchema.getType().name()));
       }
     }
   }
